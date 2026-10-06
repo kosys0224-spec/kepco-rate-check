@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전기요금 계약종별 진단</title>
+<meta name="description" content="경로당·마을회관·농가·소상공인이 현재 계약종별과 다른 종별로 바꿨을 때 연간 전기요금이 얼마나 달라지는지 한전 공개 요금표로 비교하는 계산기">
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --ink:#1b1f24; --muted:#5b6470; --line:#e2e6ea;
+  --accent:#0b5fff; --accent-ink:#ffffff; --good:#0a7a3d; --good-bg:#e8f6ee; --bad:#b42318; --bad-bg:#fdecea; --warn-bg:#fff7e6; --warn:#8a5a00;
+  --radius:12px; --font:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1216; --card:#171b21; --ink:#e8ebef; --muted:#9aa4b1; --line:#2a313a;
+    --accent:#4d8dff; --good:#5fd38d; --good-bg:#10301e; --bad:#ff8a7a; --bad-bg:#3a1a16; --warn-bg:#3a2d10; --warn:#ffd27a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1216; --card:#171b21; --ink:#e8ebef; --muted:#9aa4b1; --line:#2a313a;
+  --accent:#4d8dff; --good:#5fd38d; --good-bg:#10301e; --bad:#ff8a7a; --bad-bg:#3a1a16; --warn-bg:#3a2d10; --warn:#ffd27a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.55}
+.wrap{max-width:880px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:1.5rem;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 20px;font-size:.95rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.card h2{font-size:1.05rem;margin:0 0 12px}
+label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:4px}
+select,input[type=number]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:1rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.grid{grid-template-columns:1fr}}
+.months{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px}
+@media (max-width:560px){.months{grid-template-columns:repeat(3,1fr)}}
+.months label{font-size:.8rem;text-align:center;margin:0 0 2px}
+.months input{padding:8px 6px;text-align:center}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:.92rem}
+.chk input{margin-top:4px}
+button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:12px 18px;font-size:1rem;cursor:pointer;width:100%;margin-top:14px}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);width:auto;padding:6px 12px;font-size:.85rem;margin:0}
+.hint{font-size:.85rem;color:var(--muted);margin-top:6px}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:.88rem;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600;font-size:.85rem}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.8rem;font-weight:600}
+.pill.good{background:var(--good-bg);color:var(--good)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.cur{background:var(--line);color:var(--muted)}
+.result-card{border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:10px}
+.result-card.best{border-color:var(--good)}
+.rc-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.rc-head .name{font-weight:700}
+.rc-head .amt{font-size:1.25rem;font-weight:700;white-space:nowrap}
+.diff{font-size:.95rem;margin-top:2px}
+.elig{font-size:.86rem;color:var(--muted);margin-top:6px}
+details{margin-top:8px}
+summary{cursor:pointer;font-size:.88rem;color:var(--accent)}
+.src{font-size:.82rem;color:var(--muted)}
+.src a{color:var(--accent);text-decoration:none}
+footer{font-size:.8rem;color:var(--muted);margin-top:24px}
+.sr{position:absolute;left:-9999px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>전기요금 계약종별 진단</h1>
+  <p class="sub">지금 쓰는 계약종별이 맞는지, 바꾸면 1년에 얼마가 달라지는지 한전 공개 요금표로 계산합니다. 입력값은 어디에도 전송되지 않습니다.</p>
+
+  <div class="card">
+    <h2>1. 시설과 현재 계약</h2>
+    <div class="grid">
+      <div>
+        <label for="preset">시설 유형</label>
+        <select id="preset">
+          <option value="senior">경로당·마을회관 (사회복지시설)</option>
+          <option value="farm">농가·축사·양식장·저온창고</option>
+          <option value="pump">양곡 양수·배수 펌프</option>
+          <option value="shop">소상공인·사무실·점포</option>
+          <option value="edu">학교·도서관·박물관</option>
+          <option value="any">직접 선택</option>
+        </select>
+      </div>
+      <div>
+        <label for="current">현재 계약종별 (고지서의 「계약종별」)</label>
+        <select id="current"></select>
+      </div>
+      <div>
+        <label for="kw">계약전력 (kW) — 고지서 「계약전력」</label>
+        <input id="kw" type="number" min="1" step="1" value="5">
+        <div class="hint">주택용은 계약전력을 쓰지 않습니다. 다른 종별 기본요금 계산에만 씁니다.</div>
+      </div>
+      <div>
+        <label for="mode">사용량 입력 방식</label>
+        <select id="mode">
+          <option value="avg">월 평균 사용량 1개 (대략 계산)</option>
+          <option value="monthly">최근 12개월 월별 사용량 (정확)</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="avgBox" style="margin-top:12px">
+      <label for="avg">월 평균 사용량 (kWh) — 고지서 「당월 사용량」</label>
+      <input id="avg" type="number" min="0" step="1" value="300">
+      <div class="hint">1년 내내 같은 양을 쓴다고 가정합니다. 여름·겨울에 많이 쓰면 12개월 입력이 정확합니다.</div>
+    </div>
+
+    <div id="monthBox" style="display:none;margin-top:12px">
+      <label>월별 사용량 (kWh)</label>
+      <div class="months" id="months"></div>
+    </div>
+
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="welfare"> <span>사회복지시설 전기요금 감액(30%) 적용 대상입니다 — 경로당·노인복지관 등 사회복지사업법상 신고 시설. <b>주택용·일반용에만 적용되며 신청해야 받습니다.</b></span></label>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="welfareNow"> <span>지금 이미 감액을 받고 있습니다 (고지서에 「복지할인」 금액이 찍혀 있음)</span></label>
+    </div>
+
+    <button id="run">계산하기</button>
+  </div>
+
+  <div class="card" id="out" style="display:none">
+    <h2>2. 비교 결과 <span class="src" id="period"></span></h2>
+    <div id="cards"></div>
+    <div class="note" id="caveat"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. 바꾸려면</h2>
+    <ul style="margin:0;padding-left:18px;font-size:.93rem">
+      <li><b>계약종별 변경</b>: 한전 고객센터 <b>123</b> 또는 사이버한전(cyber.kepco.co.kr) → 전기사용계약 변경. 용도를 증명하는 서류(사업자등록증, 농업경영체 등록확인서, 시설 신고증 등)를 요구할 수 있습니다.</li>
+      <li><b>사회복지시설 감액</b>: 같은 경로로 「복지할인」 신청. 신고필증이 필요합니다. 신청한 달부터 적용되고 소급되지 않습니다.</li>
+      <li><b>계약전력 조정</b>: 실제 사용설비보다 계약전력이 크면 기본요금을 매달 더 냅니다. 이것도 123에서 변경 신청할 수 있습니다.</li>
+      <li>이 계산기는 <b>자격이 되는지까지 판정하지 않습니다.</b> 종별마다 적용 조건이 있으니 결과표의 「적용 조건」을 읽고 한전에 확인하세요.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>4. 산식과 출처</h2>
+    <p class="src" id="formula"></p>
+    <p class="src" id="sources"></p>
+  </div>
+
+  <footer>이 계산기는 참고용입니다. 실제 청구액은 검침일, 계약 조건, 요금 개정, 할인 중복 규칙에 따라 다를 수 있습니다. 최종 판단은 한국전력공사의 안내를 따르십시오. · <a href="https://github.com/YOUR_ID/kepco-rate-check" style="color:var(--accent)">GitHub</a> · MIT</footer>
+</div>
+
+<script id="tariff-embedded" type="application/json">
+{
+  "meta": {
+    "updated": "2026-10-06",
+    "note": "한국전력공사 사이버한전 전기요금표(저압 기준)에서 2026-10-06에 확인한 값. 2023-11-09 시행분이 현행이며 농사용만 2025-04-01 단가 적용. 요금 개정 시 이 파일만 갱신하면 됩니다.",
+    "sources": {
+      "주택용": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/E/E/CYEEHP00101.jsp",
+      "일반용": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/E/E/CYEEHP00102.jsp",
+      "산업용": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/E/E/CYEEHP00103.jsp",
+      "교육용": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/E/E/CYEEHP00104.jsp",
+      "농사용": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/E/E/CYEEHP00105.jsp",
+      "기후환경요금": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/H/C/CYHCHP00211.jsp",
+      "연료비조정요금": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/H/C/CYHCHP00210.jsp",
+      "복지할인": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/H/C/CYHCHP00208.jsp",
+      "약관_계약종별": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/D/C/CYDCHP00107.jsp",
+      "약관_요금계산": "https://cyber.kepco.co.kr/ckepco/front/jsp/CY/D/C/CYDCHP00108.jsp",
+      "전력기금": "https://www.korea.kr/briefing/pressReleaseView.do?newsId=156632764"
+    }
+  },
+  "common": {
+    "climate_won_per_kwh": 9.0,
+    "fuel_adj_won_per_kwh": 5.0,
+    "fuel_adj_note": "2026년 4분기까지 상한 +5.0원/kWh 유지(뉴시스 2026-09-21). 분기마다 바뀔 수 있음.",
+    "vat_rate": 0.10,
+    "fund_rate": 0.027,
+    "fund_note": "전력산업기반기금 부담금 요율 3.7%→3.2%(2024.7.1)→2.7%(2025.7.1). 기획재정부 보도자료 2024-05-28.",
+    "welfare_facility_discount": 0.30,
+    "welfare_note": "사회복지사업법상 사회복지시설(노인복지주택·일부 양로·요양시설 제외)은 주택용·일반용 요금의 30% 감액(한전 복지할인 안내). 신청주의.",
+    "seasons": {
+      "summer": [6, 7, 8],
+      "winter": [11, 12, 1, 2],
+      "spring_fall": [3, 4, 5, 9, 10]
+    }
+  },
+  "rates": {
+    "res_low": {
+      "name": "주택용 전력(저압)",
+      "type": "residential",
+      "effective": "2023-11-09",
+      "eligibility": "주거용 고객, 계약전력 3kW 이하 고객(농사용·가로등·임시전력 제외), 집단주거용 사회복지시설·기숙사(희망 시), 주거용 오피스텔 — 약관 제56조",
+      "min_charge": 1000,
+      "summer": {
+        "months": [7, 8],
+        "tiers": [
+          {"upto": 300, "base": 910, "energy": 120.0},
+          {"upto": 450, "base": 1600, "energy": 214.6},
+          {"upto": null, "base": 7300, "energy": 307.3}
+        ],
+        "super_user_over": 1000,
+        "super_user_rate": 736.2
+      },
+      "other": {
+        "tiers": [
+          {"upto": 200, "base": 910, "energy": 120.0},
+          {"upto": 400, "base": 1600, "energy": 214.6},
+          {"upto": null, "base": 7300, "energy": 307.3}
+        ],
+        "super_user_over": 1000,
+        "super_user_rate": 736.2,
+        "super_user_months": [12, 1, 2]
+      }
+    },
+    "gen_a1_low": {
+      "name": "일반용 전력(갑)Ⅰ 저압",
+      "type": "demand",
+      "effective": "2023-11-09",
+      "eligibility": "타 종별을 제외한 계약전력 300kW 미만 고객 — 약관 제57조",
+      "base_per_kw": 6160,
+      "energy": {"summer": 132.4, "spring_fall": 91.9, "winter": 119.0}
+    },
+    "edu_a_low": {
+      "name": "교육용 전력(갑) 저압",
+      "type": "demand",
+      "effective": "2023-11-09",
+      "eligibility": "법령에 의한 학교·도서관·박물관·미술관·과학관, 계약전력 1,000kW 미만",
+      "base_per_kw": 5230,
+      "energy": {"summer": 123.6, "spring_fall": 86.4, "winter": 110.8}
+    },
+    "ind_a1_low": {
+      "name": "산업용 전력(갑)Ⅰ 저압",
+      "type": "demand",
+      "effective": "2023-11-09",
+      "eligibility": "광업·제조업 및 기타사업(한국표준산업분류 기준), 계약전력 300kW 미만",
+      "base_per_kw": 5550,
+      "energy": {"summer": 107.7, "spring_fall": 85.9, "winter": 106.0}
+    },
+    "agr_a": {
+      "name": "농사용 전력(갑)",
+      "type": "demand",
+      "effective": "2025-04-01",
+      "eligibility": "양곡생산을 위한 양수·배수펌프 및 수문조작 — 약관 제60조 제1항 제1호",
+      "base_per_kw": 360,
+      "energy": {"summer": 48.3, "spring_fall": 48.3, "winter": 48.3}
+    },
+    "agr_b_low": {
+      "name": "농사용 전력(을) 저압",
+      "type": "demand",
+      "effective": "2025-04-01",
+      "eligibility": "계약전력 1,000kW 미만의 육묘·전조재배, 농작물재배·축산·양잠·수산물양식, 농작물 저온보관, 농수산물 건조시설, 해충구제·유인등, 생산자단체 직영 APC·FPC·가축분뇨처리장 등 — 약관 제60조 제1항 제2호",
+      "base_per_kw": 1150,
+      "energy": {"summer": 65.9, "spring_fall": 65.9, "winter": 65.9}
+    }
+  }
+}
+</script>
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  let T = JSON.parse(document.getElementById('tariff-embedded').textContent);
+  // GitHub Pages 등에서는 data/tariff.json을 우선 읽어 갱신 편의를 높입니다. 실패하면 내장값 사용.
+  fetch('data/tariff.json').then(r=>r.ok?r.json():null).then(j=>{ if(j&&j.rates){ T=j; init(); } }).catch(()=>{});
+
+  const PRESETS = {
+    senior: { candidates:['gen_a1_low','res_low'], current:'gen_a1_low', kw:5, welfare:true },
+    farm:   { candidates:['agr_b_low','gen_a1_low','res_low','ind_a1_low'], current:'gen_a1_low', kw:10, welfare:false },
+    pump:   { candidates:['agr_a','agr_b_low','gen_a1_low'], current:'gen_a1_low', kw:10, welfare:false },
+    shop:   { candidates:['gen_a1_low','res_low','ind_a1_low'], current:'gen_a1_low', kw:5, welfare:false },
+    edu:    { candidates:['edu_a_low','gen_a1_low'], current:'gen_a1_low', kw:20, welfare:false },
+    any:    { candidates:null, current:'gen_a1_low', kw:5, welfare:false }
+  };
+
+  function seasonOf(m, key){
+    const s=T.common.seasons;
+    if(s.summer.includes(m)) return 'summer';
+    if(s.winter.includes(m)) return 'winter';
+    return 'spring_fall';
+  }
+  const floor=x=>Math.floor(x), floor10=x=>Math.floor(x/10)*10, round=x=>Math.round(x);
+
+  function resBaseEnergy(r, m, kwh){
+    const isSummer = r.summer.months.includes(m);
+    const blk = isSummer ? r.summer : r.other;
+    let remaining=kwh, prev=0, energy=0, base=0, tierIdx=0;
+    for(let i=0;i<blk.tiers.length;i++){
+      const t=blk.tiers[i]; const cap = t.upto==null ? Infinity : t.upto;
+      const span = Math.max(0, Math.min(kwh, cap) - prev);
+      if(kwh>prev){ tierIdx=i; }
+      energy += span * t.energy; prev = cap; if(kwh<=cap) break;
+    }
+    // 슈퍼유저: 하계(7~8월)·동계(12~2월) 1,000kWh 초과분은 별도 단가
+    const suMonths = isSummer ? r.summer.months : (r.other.super_user_months||[]);
+    if(suMonths.includes(m) && kwh>blk.super_user_over){
+      const top = blk.tiers[blk.tiers.length-1].energy;
+      energy += (kwh-blk.super_user_over)*(blk.super_user_rate-top);
+    }
+    base = blk.tiers[tierIdx].base;
+    return {base, energy};
+  }
+
+  function calcMonth(key, m, kwh, kw, welfare){
+    const r=T.rates[key], c=T.common;
+    let base=0, energy=0;
+    if(r.type==='residential'){ const be=resBaseEnergy(r,m,kwh); base=be.base; energy=be.energy; }
+    else { base = r.base_per_kw*kw; energy = r.energy[seasonOf(m)]*kwh; }
+    base=floor(base); energy=floor(energy);
+    const climate=floor(kwh*c.climate_won_per_kwh), fuel=floor(kwh*c.fuel_adj_won_per_kwh);
+    let sub = base+energy+climate+fuel;
+    if(r.type==='residential' && r.min_charge && sub<r.min_charge) sub=r.min_charge;
+    const discountable = (key==='res_low'||key.startsWith('gen_'));
+    const discount = (welfare && discountable) ? floor(sub*c.welfare_facility_discount) : 0;
+    const bill = sub-discount;
+    const vat=round(bill*c.vat_rate), fund=floor10(bill*c.fund_rate);
+    const total=floor10(bill+vat+fund);
+    return {m,kwh,base,energy,climate,fuel,sub,discount,bill,vat,fund,total};
+  }
+
+  function calcYear(key, usage, kw, welfare){
+    const months = usage.map((kwh,i)=>calcMonth(key,i+1,kwh,kw,welfare));
+    return {key, months, total: months.reduce((a,b)=>a+b.total,0)};
+  }
+
+  const won = n => n.toLocaleString('ko-KR')+'원';
+
+  function init(){
+    const cur=$('#current'); const prev=cur.value;
+    cur.innerHTML='';
+    Object.entries(T.rates).forEach(([k,r])=>{ const o=document.createElement('option'); o.value=k; o.textContent=r.name; cur.appendChild(o); });
+    if(prev && T.rates[prev]) cur.value=prev; else applyPreset();
+    if(!$('#months').children.length){
+      for(let i=1;i<=12;i++){ const d=document.createElement('div'); d.innerHTML=`<label for="m${i}">${i}월</label><input id="m${i}" type="number" min="0" step="1" value="300">`; $('#months').appendChild(d); }
+    }
+    $('#formula').innerHTML = `월 요금 = 기본요금 + 전력량요금 + 기후환경요금(${T.common.climate_won_per_kwh}원/kWh) + 연료비조정요금(${T.common.fuel_adj_won_per_kwh>0?'+':''}${T.common.fuel_adj_won_per_kwh}원/kWh) [− 사회복지시설 감액 ${T.common.welfare_facility_discount*100}%] → 부가가치세 ${T.common.vat_rate*100}% + 전력산업기반기금 ${(T.common.fund_rate*100).toFixed(1)}% → 10원 미만 절사. 주택용은 누진 3단계·하계(7~8월) 구간·슈퍼유저 단가·최저요금 ${T.rates.res_low.min_charge}원을 반영합니다. 저압 기준이며 고압·시간대별 요금(갑Ⅱ·을)은 다루지 않습니다.`;
+    const s=T.meta.sources;
+    $('#sources').innerHTML = `요금표 확인일 ${T.meta.updated}. ` + Object.entries(s).map(([k,v])=>`<a href="${v}" target="_blank" rel="noopener">${k}</a>`).join(' · ') + `<br>${T.common.fuel_adj_note} ${T.common.fund_note}`;
+  }
+
+  function applyPreset(){
+    const p=PRESETS[$('#preset').value];
+    $('#current').value=p.current; $('#kw').value=p.kw; $('#welfare').checked=p.welfare;
+  }
+  $('#preset').addEventListener('change', applyPreset);
+  $('#mode').addEventListener('change', ()=>{ const mo=$('#mode').value==='monthly'; $('#monthBox').style.display=mo?'':'none'; $('#avgBox').style.display=mo?'none':''; });
+
+  $('#run').addEventListener('click', ()=>{
+    const p=PRESETS[$('#preset').value];
+    const curKey=$('#current').value, kw=Math.max(1,Number($('#kw').value)||1);
+    const welfare=$('#welfare').checked, welfareNow=$('#welfareNow').checked;
+    const usage = $('#mode').value==='monthly'
+      ? Array.from({length:12},(_,i)=>Math.max(0,Number($('#m'+(i+1)).value)||0))
+      : Array(12).fill(Math.max(0,Number($('#avg').value)||0));
+    const keys = (p.candidates||Object.keys(T.rates)).slice();
+    if(!keys.includes(curKey)) keys.unshift(curKey);
+
+    // 현재 요금: 감액을 이미 받는 중이면 감액 포함, 아니면 미포함
+    const current = calcYear(curKey, usage, kw, welfare && welfareNow);
+    const results = keys.map(k=>calcYear(k, usage, kw, welfare));
+    results.sort((a,b)=>a.total-b.total);
+
+    const box=$('#cards'); box.innerHTML='';
+    results.forEach((r,i)=>{
+      const rate=T.rates[r.key]; const diff=r.total-current.total; const isCur=r.key===curKey;
+      const card=document.createElement('div'); card.className='result-card'+(i===0&&diff<0?' best':'');
+      let pill;
+      if(isCur && diff===0) pill='<span class="pill cur">현재 계약</span>';
+      else if(isCur) pill=`<span class="pill cur">현재 계약</span> <span class="pill good">감액만 신청해도 연 ${won(-diff)} 절감</span>`;
+      else pill = diff<0?`<span class="pill good">연 ${won(-diff)} 절감</span>`:(diff>0?`<span class="pill bad">연 ${won(diff)} 증가</span>`:'<span class="pill cur">차이 없음</span>');
+      const disc = r.months.reduce((a,b)=>a+b.discount,0);
+      card.innerHTML = `<div class="rc-head"><div class="name">${rate.name}</div><div class="amt">연 ${won(r.total)}</div></div>
+        <div class="diff">${pill} <span class="src">월 평균 ${won(Math.round(r.total/12))}${disc?` · 감액 반영 연 ${won(disc)}`:''}</span></div>
+        <div class="elig"><b>적용 조건</b> ${rate.eligibility} <span class="src">(단가 시행일 ${rate.effective})</span></div>
+        <details><summary>월별 내역 보기</summary><div style="overflow:auto"><table><thead><tr><th>월</th><th>kWh</th><th>기본</th><th>전력량</th><th>기후환경</th><th>연료비</th><th>감액</th><th>부가세</th><th>기금</th><th>청구</th></tr></thead><tbody>
+        ${r.months.map(x=>`<tr><td>${x.m}월</td><td>${x.kwh.toLocaleString()}</td><td>${x.base.toLocaleString()}</td><td>${x.energy.toLocaleString()}</td><td>${x.climate.toLocaleString()}</td><td>${x.fuel.toLocaleString()}</td><td>${x.discount?'-'+x.discount.toLocaleString():'0'}</td><td>${x.vat.toLocaleString()}</td><td>${x.fund.toLocaleString()}</td><td><b>${x.total.toLocaleString()}</b></td></tr>`).join('')}
+        </tbody></table></div></details>`;
+      box.appendChild(card);
+    });
+    const best=results[0];
+    let cv = `현재 계약(${T.rates[curKey].name})은 연 ${won(current.total)}로 계산됩니다. `;
+    if(best.key!==curKey && best.total<current.total) cv += `가장 낮은 것은 ${T.rates[best.key].name}이며 연 ${won(current.total-best.total)} 차이입니다. 단, 그 종별의 적용 조건을 충족해야 하고 한전 심사를 거칩니다.`;
+    else cv += `입력한 조건에서는 현재 계약이 가장 낮거나 같습니다.`;
+    if(welfare && !welfareNow && (curKey==='res_low'||curKey.startsWith('gen_'))) cv += ` 사회복지시설 감액을 아직 받지 않고 있다면, 종별을 바꾸지 않고 감액만 신청해도 연 ${won(current.total - calcYear(curKey,usage,kw,true).total)}가 줄어듭니다.`;
+    $('#caveat').textContent=cv;
+    $('#period').textContent = $('#mode').value==='monthly' ? '— 입력한 12개월 기준' : '— 월 평균 × 12개월 기준';
+    $('#out').style.display='';
+    $('#out').scrollIntoView({behavior:'smooth',block:'start'});
+  });
+
+  init();
+  window.__calc = {calcMonth, calcYear, get T(){return T;}};
+})();
+</script>
+</body>
+</html>
